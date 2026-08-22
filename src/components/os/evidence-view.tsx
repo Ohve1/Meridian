@@ -46,7 +46,8 @@ export function EvidenceView() {
           <p className="text-xs font-medium tracking-widest text-subtle uppercase">Person world</p>
           <h1 className="font-display text-4xl tracking-tight">Evidence bank</h1>
           <p className="max-w-xl text-muted">
-            The CV is a projection. This is the asset. Strength is honesty, not optimism.
+            Evidence proves a skill. It is not the skill, and it is not the technology. Strength is
+            honesty, not optimism.
           </p>
         </div>
         <AddEvidenceDialog />
@@ -80,7 +81,7 @@ export function EvidenceView() {
               <div className="mb-3 flex items-baseline justify-between">
                 <h2 className="font-display text-xl tracking-tight">{g.sk.name}</h2>
                 <span className="font-mono text-xs tabular-nums text-muted">
-                  {g.strength}/5 · {g.items.length}
+                  proves · {g.strength}/5 · {g.items.length}
                 </span>
               </div>
               <ul className="space-y-2">
@@ -174,6 +175,7 @@ function AddEvidenceDialog() {
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
   const [summary, setSummary] = useState("");
+  const [url, setUrl] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
 
   function save() {
@@ -181,6 +183,7 @@ function AddEvidenceDialog() {
     addEvidence({
       title: title.trim(),
       source: source.trim() || "Personal",
+      url: url.trim() || undefined,
       summary: summary.trim(),
       strength: 3,
       skillIds: picked,
@@ -194,6 +197,7 @@ function AddEvidenceDialog() {
     setOpen(false);
     setTitle("");
     setSource("");
+    setUrl("");
     setSummary("");
     setPicked([]);
   }
@@ -216,6 +220,10 @@ function AddEvidenceDialog() {
           <label className="grid gap-1.5">
             <Label>Source</Label>
             <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="Sertie, MSc, project…" />
+          </label>
+          <label className="grid gap-1.5">
+            <Label>URL (optional)</Label>
+            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Repo, paper, write-up…" />
           </label>
           <label className="grid gap-1.5">
             <Label>What is verifiable</Label>

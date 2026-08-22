@@ -5,6 +5,7 @@ import {
   conversionByPositioning,
   marketGaps,
   nextActions,
+  type NextAction,
 } from "@/lib/os/intelligence";
 import { useOS } from "@/lib/os/store";
 import { greeting } from "@/lib/utils";
@@ -19,8 +20,8 @@ export function TodayView() {
   const trends = computeTrends(state.jobs, state.signals, state.skills);
   const lead = trends[0];
   const conv = conversionByPositioning(state.applications, state.cvs);
-  const primary = actions.find((a) => a.kind === "project") ?? actions[0];
-  const rest = actions.filter((a) => a.id !== primary?.id).slice(0, 3);
+  const primary = actions[0];
+  const rest = actions.slice(1, 4);
 
   return (
     <div className="stagger-in mx-auto max-w-3xl space-y-8">
@@ -30,8 +31,7 @@ export function TodayView() {
           {greeting()}, {state.profile.name}.
         </h1>
         <p className="max-w-xl text-muted">
-          {state.applications.filter((a) => a.stage !== "rejected" && a.stage !== "offer").length}{" "}
-          live applications. The question is not what to track — it is what to do in the next hour.
+          What should you do next, given the current market and your evidence.
         </p>
       </header>
 
@@ -49,27 +49,7 @@ export function TodayView() {
         </section>
       ) : null}
 
-      {primary ? (
-        <section className="rounded-2xl bg-elevated p-5 shadow-[var(--shadow-border)] md:p-6">
-          <p className="text-xs font-medium tracking-widest text-accent uppercase">
-            {primary.kicker}
-          </p>
-          <h2 className="mt-2 font-display text-2xl tracking-tight">{primary.title}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted">{primary.body}</p>
-          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs tabular-nums text-subtle">
-            {primary.effort ? <span>Effort {primary.effort}</span> : null}
-            {primary.impact ? <span>{primary.impact}</span> : null}
-          </div>
-          <div className="mt-5">
-            <Button asChild>
-              <Link to={primary.href as "/"}>
-                {primary.cta}
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-          </div>
-        </section>
-      ) : null}
+      {primary ? <PrimaryAction action={primary} /> : null}
 
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-4">
@@ -94,7 +74,7 @@ export function TodayView() {
           >
             <p className="text-xs font-medium tracking-widest text-subtle uppercase">{a.kicker}</p>
             <h3 className="mt-2 font-display text-xl tracking-tight">{a.title}</h3>
-            <p className="mt-2 text-sm text-muted">{a.body}</p>
+            <p className="mt-2 text-sm text-muted">{a.reason}</p>
             <p className="mt-4 text-sm text-accent">{a.cta}</p>
           </Link>
         ))}
@@ -128,6 +108,41 @@ export function TodayView() {
           <Link to="/market">Open market world</Link>
         </Button>
       </div>
+    </div>
+  );
+}
+
+function PrimaryAction({ action }: { action: NextAction }) {
+  return (
+    <section className="rounded-2xl bg-elevated p-5 shadow-[var(--shadow-border)] md:p-6">
+      <p className="text-xs font-medium tracking-widest text-accent uppercase">{action.kicker}</p>
+      <h2 className="mt-2 font-display text-2xl tracking-tight md:text-3xl">{action.title}</h2>
+      <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+        <Fact label="Why" value={action.reason} />
+        {action.evidenceGap ? <Fact label="Evidence gap" value={action.evidenceGap} /> : null}
+        <Fact label="Estimated effort" value={action.effort} />
+        <Fact label="Expected impact" value={action.expectedOutcome} />
+      </dl>
+      <div className="mt-6 flex flex-wrap items-center gap-4">
+        <Button asChild>
+          <Link to={action.href as "/"}>
+            {action.cta}
+            <ArrowRight className="size-4" />
+          </Link>
+        </Button>
+        <span className="font-mono text-xs tabular-nums text-subtle">
+          value {action.actionValue.toFixed(2)}
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-medium tracking-widest text-subtle uppercase">{label}</dt>
+      <dd className="mt-1 text-sm leading-relaxed text-fg">{value}</dd>
     </div>
   );
 }

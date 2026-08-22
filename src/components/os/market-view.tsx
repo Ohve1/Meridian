@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { computeTrends, demandBySkill, matchScore } from "@/lib/os/intelligence";
+import { computeTrends, demandBySkill, matchScore, strengthForSkill } from "@/lib/os/intelligence";
 import { useOS } from "@/lib/os/store";
-import { TIER_LABEL, TIER_QUESTION, type SignalTier } from "@/lib/os/types";
+import { TIER_LABEL, TIER_QUESTION, TIER_SOURCES, type SignalTier } from "@/lib/os/types";
+import { AddSignalDialog } from "@/components/os/add-signal-dialog";
 import { DemandBar } from "@/components/os/skill-meter";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const TABS = ["Trends", "Jobs", "Signals"] as const;
@@ -15,8 +17,23 @@ export function MarketView() {
   const skills = useOS((s) => s.skills);
   const signals = useOS((s) => s.signals);
   const evidence = useOS((s) => s.evidence);
+  const technologies = useOS((s) => s.technologies);
   const demand = demandBySkill(jobs, skills).filter((d) => d.jobs > 0);
   const trends = computeTrends(jobs, signals, skills);
+
+  const ontology = technologies
+    .map((tech) => {
+      const linked = skills.filter((s) => s.technologyIds.includes(tech.id));
+      const rows = linked.map((s) => {
+        const proof = evidence
+          .filter((e) => e.skillIds.includes(s.id))
+          .sort((a, b) => b.strength - a.strength)[0];
+        return { skill: s, proof, strength: strengthForSkill(s.id, evidence) };
+      });
+      return { tech, rows };
+    })
+    .filter((row) => row.rows.length > 0)
+    .slice(0, 6);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -24,9 +41,21 @@ export function MarketView() {
         <p className="text-xs font-medium tracking-widest text-subtle uppercase">Market world</p>
         <h1 className="font-display text-4xl tracking-tight">What the labour market is buying</h1>
         <p className="max-w-2xl text-muted">
-          Jobs are signals, not the top of the ontology. Tier 1 is demand. Hype is not demand.
+          Demand is not technology momentum, and neither is social attention. Jobs are signals.
         </p>
       </header>
+
+      <section className="grid gap-3 sm:grid-cols-4">
+        {([1, 2, 3, 4] as SignalTier[]).map((tier) => (
+          <div key={tier} className="rounded-2xl bg-surface p-4 shadow-[var(--shadow-border)]">
+            <p className="text-xs font-medium tracking-widest text-subtle uppercase">
+              Tier {tier} · {TIER_LABEL[tier]}
+            </p>
+            <p className="mt-2 text-sm text-fg">{TIER_QUESTION[tier]}</p>
+            <p className="mt-3 text-xs text-muted">{TIER_SOURCES[tier].join(" · ")}</p>
+          </div>
+        ))}
+      </section>
 
       <div className="flex gap-1 rounded-xl bg-surface p-1 shadow-[var(--shadow-border)]">
         {TABS.map((t) => (
@@ -45,6 +74,39 @@ export function MarketView() {
 
       {tab === "Trends" ? (
         <div className="space-y-8">
+          <section className="space-y-3 rounded-2xl bg-surface p-5 shadow-[var(--shadow-border)]">
+            <h2 className="font-display text-xl tracking-tight">Ontology</h2>
+            <p className="text-sm text-muted">
+              Technology is what exists. Skill is what a JD asks for. Evidence is what you can prove.
+            </p>
+            <ul className="divide-y divide-line">
+              {ontology.map((row) => (
+                <li key={row.tech.id} className="grid gap-3 py-3 sm:grid-cols-3 sm:gap-4">
+                  <div>
+                    <p className="text-xs text-subtle">Technology</p>
+                    <p className="text-sm text-fg">{row.tech.name}</p>
+                  </div>
+                  <div className="sm:col-span-2 space-y-2">
+                    {row.rows.map((r) => (
+                      <div key={r.skill.id} className="grid gap-1 sm:grid-cols-2">
+                        <div>
+                          <p className="text-xs text-subtle">Skill</p>
+                          <p className="text-sm text-fg">{r.skill.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-subtle">Evidence</p>
+                          <p className="text-sm text-muted">
+                            {r.proof ? `${r.proof.title} (${r.strength}/5)` : `None (${r.strength}/5)`}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="space-y-3 rounded-2xl bg-surface p-5 shadow-[var(--shadow-border)]">
             <h2 className="font-display text-xl tracking-tight">Demand in the current job set</h2>
             <p className="text-sm text-muted">
@@ -119,9 +181,14 @@ export function MarketView() {
 
       {tab === "Signals" ? (
         <div className="space-y-6">
-          <p className="text-sm text-muted">
-            Four tiers, never averaged. A viral post does not move a hiring budget.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="max-w-xl text-sm text-muted">
+              Four tiers, never averaged. A viral post does not move a hiring budget.
+            </p>
+            <AddSignalDialog>
+              <Button variant="secondary">Log a signal</Button>
+            </AddSignalDialog>
+          </div>
           {([1, 2, 3, 4] as SignalTier[]).map((tier) => {
             const rows = signals.filter((s) => s.tier === tier);
             return (
@@ -146,6 +213,16 @@ export function MarketView() {
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-muted">{s.rawContent}</p>
+                      {s.url ? (
+                        <a
+                          href={s.url}
+                          className="mt-2 inline-block text-xs text-subtle hover:text-fg"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {s.url}
+                        </a>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

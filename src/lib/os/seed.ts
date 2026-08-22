@@ -8,6 +8,7 @@ import type {
   Profile,
   Project,
   Skill,
+  Technology,
 } from "./types";
 
 export const PROFILE: Profile = {
@@ -16,21 +17,66 @@ export const PROFILE: Profile = {
   focus: "AI Engineer · AI Product",
 };
 
+export const TECHNOLOGIES: Technology[] = [
+  {
+    id: "tech_python",
+    name: "Python",
+    description: "The default implementation language in this market.",
+  },
+  {
+    id: "tech_mcp",
+    name: "MCP",
+    description: "Model Context Protocol — a technology, not a skill.",
+  },
+  {
+    id: "tech_transformers",
+    name: "Foundation models",
+    description: "LLMs as a class of technology employers assume you can use.",
+  },
+  {
+    id: "tech_rag",
+    name: "Retrieval stacks",
+    description: "Embeddings, hybrid search, vector stores.",
+  },
+  {
+    id: "tech_langgraph",
+    name: "Agent frameworks",
+    description: "LangGraph, orchestration runtimes, tool loops.",
+  },
+  {
+    id: "tech_cloud",
+    name: "Cloud",
+    description: "AWS / GCP / Azure as deployment substrate.",
+  },
+  {
+    id: "tech_sql",
+    name: "SQL warehouses",
+    description: "Analytical SQL, not a product skill.",
+  },
+  {
+    id: "tech_eval",
+    name: "Eval harnesses",
+    description: "Benchmarks, judges, trajectory scoring — the tooling around measurement.",
+  },
+];
+
 export const SKILLS: Skill[] = [
   {
     id: "python",
     name: "Python",
-    layer: "technology",
+    layer: "skill",
     aliases: ["python", "fastapi", "pandas"],
     description: "Production Python for backends, data, and eval harnesses.",
+    technologyIds: ["tech_python"],
     demandDelta: 2,
   },
   {
     id: "llm",
-    name: "LLM",
+    name: "LLM systems",
     layer: "capability",
     aliases: ["llm", "large language", "gpt", "transformer", "foundation model"],
     description: "Working with large language models in products.",
+    technologyIds: ["tech_transformers"],
     demandDelta: 8,
   },
   {
@@ -39,14 +85,16 @@ export const SKILLS: Skill[] = [
     layer: "capability",
     aliases: ["rag", "retrieval augmented", "retrieval-augmented", "vector search", "embeddings"],
     description: "Retrieval-augmented generation systems.",
+    technologyIds: ["tech_rag"],
     demandDelta: 5,
   },
   {
     id: "agents",
-    name: "Agentic AI",
+    name: "Agentic systems",
     layer: "capability",
     aliases: ["agent", "agentic", "multi-agent", "orchestration", "langgraph"],
     description: "Designing and shipping agentic systems.",
+    technologyIds: ["tech_langgraph", "tech_mcp"],
     demandDelta: 42,
   },
   {
@@ -55,14 +103,16 @@ export const SKILLS: Skill[] = [
     layer: "capability",
     aliases: ["eval", "evaluation", "benchmark", "llm-as-judge", "reliability", "recall@"],
     description: "Measuring quality, reliability, and regressions of LLM systems.",
+    technologyIds: ["tech_eval"],
     demandDelta: 37,
   },
   {
     id: "mcp",
-    name: "MCP",
-    layer: "technology",
+    name: "Tool orchestration",
+    layer: "capability",
     aliases: ["mcp", "model context protocol", "tool use", "tool calling", "function calling"],
-    description: "Tool use and Model Context Protocol integrations.",
+    description: "Getting models to use tools correctly. MCP is the technology; this is the skill.",
+    technologyIds: ["tech_mcp"],
     demandDelta: 31,
   },
   {
@@ -71,6 +121,7 @@ export const SKILLS: Skill[] = [
     layer: "skill",
     aliases: ["product", "roadmap", "discovery", "user research", "pm"],
     description: "Shaping AI products from problem to shipped surface.",
+    technologyIds: [],
     demandDelta: 11,
   },
   {
@@ -79,6 +130,7 @@ export const SKILLS: Skill[] = [
     layer: "skill",
     aliases: ["strategy", "economics", "game theory", "business case"],
     description: "Structuring messy markets into decisions.",
+    technologyIds: [],
     demandDelta: 4,
   },
   {
@@ -87,22 +139,25 @@ export const SKILLS: Skill[] = [
     layer: "skill",
     aliases: ["communication", "stakeholder", "writing", "presentation"],
     description: "Clear writing and stakeholder work.",
+    technologyIds: [],
     demandDelta: 1,
   },
   {
     id: "cloud",
-    name: "Cloud",
-    layer: "technology",
+    name: "Cloud delivery",
+    layer: "skill",
     aliases: ["aws", "gcp", "azure", "cloud", "kubernetes"],
-    description: "Cloud infrastructure for ML systems.",
+    description: "Shipping ML systems onto cloud infrastructure.",
+    technologyIds: ["tech_cloud"],
     demandDelta: -3,
   },
   {
     id: "sql",
-    name: "SQL",
-    layer: "technology",
+    name: "Analytical SQL",
+    layer: "skill",
     aliases: ["sql", "warehouse", "analytics engineering"],
     description: "Analytical SQL and warehouse work.",
+    technologyIds: ["tech_sql"],
     demandDelta: 0,
   },
   {
@@ -111,6 +166,7 @@ export const SKILLS: Skill[] = [
     layer: "skill",
     aliases: ["backend", "api", "service", "production system"],
     description: "Shipping reliable backend services.",
+    technologyIds: ["tech_python"],
     demandDelta: 6,
   },
   {
@@ -119,6 +175,7 @@ export const SKILLS: Skill[] = [
     layer: "capability",
     aliases: ["observability", "tracing", "monitoring", "telemetry"],
     description: "Tracing and monitoring production agents.",
+    technologyIds: ["tech_eval"],
     demandDelta: 19,
   },
 ];
@@ -764,6 +821,7 @@ export function seedState(): OSState {
   }));
   return {
     profile: PROFILE,
+    technologies: TECHNOLOGIES,
     skills: SKILLS,
     signals: SIGNALS,
     jobs,

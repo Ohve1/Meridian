@@ -11,7 +11,8 @@ export type SourceType =
 
 export type SignalTier = 1 | 2 | 3 | 4;
 
-export type SkillLayer = "technology" | "capability" | "skill";
+/** Skill is what employers ask for. Technology is a market object. */
+export type SkillLayer = "capability" | "skill";
 
 export type Importance = "must" | "nice";
 
@@ -32,12 +33,21 @@ export interface Profile {
   focus: string;
 }
 
+/** What exists in the market. Not a skill. Not evidence. */
+export interface Technology {
+  id: string;
+  name: string;
+  description: string;
+}
+
 export interface Skill {
   id: string;
   name: string;
   layer: SkillLayer;
   aliases: string[];
   description: string;
+  /** Technologies this skill operates on. */
+  technologyIds: string[];
   /** Synthetic 30-day demand change, in percentage points. */
   demandDelta: number;
 }
@@ -87,6 +97,7 @@ export interface Evidence {
   title: string;
   summary: string;
   source: string;
+  url?: string;
   strength: 1 | 2 | 3 | 4 | 5;
   skillIds: string[];
   verifiablePoints: string[];
@@ -127,6 +138,7 @@ export interface Application {
 
 export interface OSState {
   profile: Profile;
+  technologies: Technology[];
   skills: Skill[];
   signals: MarketSignal[];
   jobs: Job[];
@@ -150,10 +162,29 @@ export const TIER_QUESTION: Record<SignalTier, string> = {
   4: "What is the market shouting?",
 };
 
+export const TIER_SOURCES: Record<SignalTier, string[]> = {
+  1: ["Job postings", "Career pages", "Recruiter hiring"],
+  2: ["GitHub", "Papers", "Hugging Face", "Kaggle", "Engineering blogs"],
+  3: ["Reddit", "X", "LinkedIn"],
+  4: ["Viral news", "Influencer posts"],
+};
+
 export const STAGE_LABEL: Record<AppStage, string> = {
   applied: "Applied",
   recruiter: "Recruiter screen",
   interview: "Interview",
   offer: "Offer",
   rejected: "Rejected",
+};
+
+export const SOURCE_TYPE_TIER: Record<SourceType, SignalTier> = {
+  JOB: 1,
+  COMPANY: 1,
+  PAPER: 2,
+  GITHUB: 2,
+  KAGGLE: 2,
+  REDDIT: 3,
+  X: 3,
+  LINKEDIN: 3,
+  NEWS: 4,
 };

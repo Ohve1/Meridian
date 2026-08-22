@@ -45,11 +45,15 @@ export interface NextAction {
   kind: "project" | "cv" | "followup" | "apply" | "outcome";
   kicker: string;
   title: string;
-  body: string;
+  reason: string;
+  target: string;
+  evidenceGap?: string;
+  expectedOutcome: string;
+  effort: string;
+  effortDays: number;
+  actionValue: number;
   cta: string;
   href: string;
-  impact?: string;
-  effort?: string;
 }
 
 export function strengthForSkill(skillId: string, evidence: Evidence[]): number {
@@ -216,6 +220,35 @@ function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
+/** Days of effort from strings like "3–5 days" or "2 hours". */
+export function parseEffortDays(label?: string): number {
+  if (!label) return 3;
+  const nums = [...label.matchAll(/\d+(?:\.\d+)?/g)].map(Number);
+  if (nums.length === 0) return 3;
+  const mean = nums.reduce((a, b) => a + b, 0) / nums.length;
+  if (/hour/i.test(label)) return Math.max(0.25, mean / 8);
+  return Math.max(0.25, mean);
+}
+
+/**
+ * Action Value = Market Demand × Job Relevance × Evidence Gap × Jobs Affected ÷ Effort
+ * Demand is 0–1, gap is 0–1 (missing evidence / 5), effort is days.
+ */
+export function actionValue(p: {
+  demandPct: number;
+  jobRelevance: number;
+  evidenceGap: number;
+  jobsAffected: number;
+  effortDays: number;
+}): number {
+  const demand = Math.max(0, p.demandPct) / 100;
+  const relevance = Math.min(1, Math.max(0.05, p.jobRelevance));
+  const gap = Math.min(1, Math.max(0, p.evidenceGap) / 5);
+  const jobs = Math.max(1, p.jobsAffected);
+  const effort = Math.max(0.25, p.effortDays);
+  return round2((demand * relevance * gap * jobs) / effort);
+}
+
 export interface ConversionRow {
   positioning: string;
   apps: number;
@@ -252,7 +285,6 @@ export function nextActions(state: OSState): NextAction[] {
   const actions: NextAction[] = [];
   const now = Date.now();
   const gaps = marketGaps(state);
-  const topGap = gaps[0];
   const demand = demandBySkill(state.jobs, state.skills);
 
   const stale = state.applications.filter((a) => {
@@ -264,38 +296,60 @@ export function nextActions(state: OSState): NextAction[] {
     const job = state.jobs.find((j) => j.id === a.jobId);
     if (!job) continue;
     const days = Math.round((now - new Date(a.date).getTime()) / 86400000);
+    const effortDays = 0.25;
     actions.push({
       id: `follow_${a.id}`,
       kind: "followup",
       kicker: "Follow up",
       title: `${job.company}`,
-      body: `Applied ${days} days ago. Still sitting at Applied — a short follow-up is cheaper than another cold application.`,
+      reason: `Applied ${days} days ago. Still sitting at Applied.`,
+      target: job.title,
+      expectedOutcome: "A cheaper signal than another cold application.",
+      effort: "30 minutes",
+      effortDays,
+      actionValue: actionValue({
+        demandPct: 35,
+        jobRelevance: 0.7,
+        evidenceGap: 1.5,
+        jobsAffected: 1,
+        effortDays,
+      }),
       cta: "Open pipeline",
       href: "/pipeline",
-      impact: `${job.title}`,
     });
   }
 
-  if (topGap && topGap.band !== "strong") {
+  for (const gap of gaps.filter((g) => g.band !== "strong").slice(0, 4)) {
     const proj =
       state.projects.find(
-        (p) =>
-          p.status !== "completed" && p.targetSkillIds.includes(topGap.skillId),
-      ) ?? state.projects.find((p) => p.status === "planned");
-    if (proj) {
-      const nJobs = demand.find((d) => d.skillId === topGap.skillId)?.jobs ?? topGap.demandJobs;
-      actions.push({
-        id: `proj_${proj.id}`,
-        kind: "project",
-        kicker: "Next action",
-        title: proj.name,
-        body: `Largest market-relevant evidence gap: ${topGap.name} (${topGap.evidenceStrength}/5). ${nJobs} target jobs ask for it.`,
-        cta: proj.status === "planned" ? "Start project" : "Open project",
-        href: "/projects",
-        effort: proj.estimatedDays,
-        impact: `Strengthens ${proj.targetJobIds.length || nJobs} applications`,
-      });
-    }
+        (p) => p.status !== "completed" && p.targetSkillIds.includes(gap.skillId),
+      ) ??
+      (gap === gaps[0] ? state.projects.find((p) => p.status === "planned") : undefined);
+    if (!proj) continue;
+    const nJobs = demand.find((d) => d.skillId === gap.skillId)?.jobs ?? gap.demandJobs;
+    const effortDays = parseEffortDays(proj.estimatedDays);
+    const demandPct = demand.find((d) => d.skillId === gap.skillId)?.pct ?? gap.demandPct;
+    actions.push({
+      id: `proj_${proj.id}_${gap.skillId}`,
+      kind: "project",
+      kicker: "Next action",
+      title: proj.name,
+      reason: `${nJobs} target jobs require ${gap.name}.`,
+      target: gap.name,
+      evidenceGap: `${gap.name} — ${gap.evidenceStrength}/5`,
+      expectedOutcome: `Strengthens ${proj.targetJobIds.length || nJobs} applications.`,
+      effort: proj.estimatedDays ?? "2–4 days",
+      effortDays,
+      actionValue: actionValue({
+        demandPct,
+        jobRelevance: 1,
+        evidenceGap: 5 - gap.evidenceStrength,
+        jobsAffected: nJobs,
+        effortDays,
+      }),
+      cta: proj.status === "planned" ? "Start project" : "Open project",
+      href: "/projects",
+    });
   }
 
   const unapplied = state.jobs
@@ -304,15 +358,32 @@ export function nextActions(state: OSState): NextAction[] {
     .sort((a, b) => b.score - a.score);
   const ready = unapplied.find((x) => x.score >= 70);
   if (ready) {
+    const jobGaps = gapsForJob(ready.job, state.evidence, state.skills);
+    const meanGap = jobGaps.length
+      ? jobGaps.reduce((a, g) => a + (5 - g.evidenceStrength), 0) / jobGaps.length
+      : 1;
+    const biggest = [...jobGaps].sort((a, b) => b.gap - a.gap)[0];
+    const effortDays = 0.5;
     actions.push({
       id: `cv_${ready.job.id}`,
       kind: "cv",
-      kicker: "CV ready",
+      kicker: "Apply",
       title: `${ready.job.title} — ${ready.job.company}`,
-      body: `Match ${ready.score}%. Evidence already covers the must-haves well enough to ship a version, not another week of polishing.`,
+      reason: `Match ${ready.score}%. Evidence already covers the must-haves.`,
+      target: ready.job.company,
+      evidenceGap: biggest ? `${biggest.name} — ${biggest.evidenceStrength}/5` : undefined,
+      expectedOutcome: "A version shipped this week, not another week of polishing.",
+      effort: "half a day",
+      effortDays,
+      actionValue: actionValue({
+        demandPct: 50,
+        jobRelevance: ready.score / 100,
+        evidenceGap: Math.max(0.8, meanGap),
+        jobsAffected: 1,
+        effortDays,
+      }),
       cta: "Review match",
       href: `/jobs/${ready.job.id}`,
-      impact: `${ready.score}% match`,
     });
   }
 
@@ -320,18 +391,38 @@ export function nextActions(state: OSState): NextAction[] {
   const weak = conv.find((c) => c.apps >= 3 && c.rate <= 25);
   const strong = conv.find((c) => c.rate >= 50);
   if (weak && strong) {
+    const effortDays = 2;
     actions.push({
       id: "outcome_reposition",
       kind: "outcome",
       kicker: "Market feedback",
       title: `${strong.positioning} converts. ${weak.positioning} does not.`,
-      body: `${strong.positioning}: ${strong.screens}/${strong.apps} screens. ${weak.positioning}: ${weak.screens}/${weak.apps}. Current evidence matches the product/strategy market more than pure engineering.`,
+      reason: `${strong.positioning}: ${strong.screens}/${strong.apps} screens. ${weak.positioning}: ${weak.screens}/${weak.apps}.`,
+      target: "Positioning",
+      expectedOutcome: "Stop spending evidence on the lower-converting CV.",
+      effort: "2 days",
+      effortDays,
+      actionValue: actionValue({
+        demandPct: 40,
+        jobRelevance: 0.8,
+        evidenceGap: 2,
+        jobsAffected: weak.apps,
+        effortDays,
+      }),
       cta: "See pipeline",
       href: "/pipeline",
     });
   }
 
-  return actions;
+  const seen = new Set<string>();
+  return actions
+    .filter((a) => {
+      const key = a.kind === "project" ? a.title : a.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => b.actionValue - a.actionValue);
 }
 
 export function relevantEvidence(job: Job, evidence: Evidence[]): Evidence[] {

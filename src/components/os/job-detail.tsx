@@ -75,7 +75,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
         <h2 className="font-display text-xl tracking-tight">Evidence against this JD</h2>
         {biggest ? (
           <p className="mt-1 mb-4 text-sm text-muted">
-            Biggest gap: {biggest.name} ({biggest.evidenceStrength}/5)
+            Biggest skill gap: {biggest.name} ({biggest.evidenceStrength}/5)
             {biggest.band === "weak" || biggest.band === "none"
               ? " — this is a project, not a wording problem."
               : "."}

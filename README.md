@@ -4,22 +4,55 @@ Career market intelligence OS.
 
 The labour market tells you what is valuable. Your evidence tells you what you can prove. Meridian tells you what to do next.
 
-This is not a job tracker. Jobs are **demand signals**. Evidence is the asset. A CV is a projection of that evidence. The home screen is **next action**, not a database.
+It is a **decision layer** between the labour market and your evidence — not a job tracker, Notion clone, CV generator, job board, or trend dashboard.
 
-## Three worlds
+## MVP
 
-| World | What it holds |
+The only question: *What should I do next, given the current market and my evidence?*
+
+Core loop:
+
+Market signal → Job / skill demand → Evidence gap → Next action → Application → Outcome
+
+V1 supports:
+
+1. Add / import a Job (manual JD paste)
+2. Extract required Skills
+3. Store Evidence
+4. Match Evidence against the JD
+5. Detect evidence gaps
+6. Rank a Next Action
+7. Track the Application
+
+## Ontology
+
+| Object | Meaning |
 | --- | --- |
-| **Market** | Jobs, papers, GitHub, practitioner talk, and hype — kept in separate tiers so a viral post is never treated as hiring demand |
-| **Person** | Skills, evidence, projects that manufacture evidence, CV versions |
-| **Decision** | What to learn, what to build, what to apply to, how to position |
+| **Technology** | What exists in the market (MCP, eval harnesses) |
+| **Skill** | What employers ask for (tool orchestration, LLM evaluation) |
+| **Evidence** | What you can prove you have done |
+| **MarketSignal** | A JD, paper, GitHub event, Reddit thread, or hype post — never mixed across tiers |
 
-Signal source hierarchy:
+Job → requires Skill. Evidence → proves Skill. MarketSignal → indicates Technology / Skill demand.
 
-1. **Demand** — JDs, hiring data, recruiter posts  
-2. **Technology** — papers, GitHub, product launches  
+## Signal hierarchy
+
+Demand ≠ technology momentum ≠ social attention.
+
+1. **Demand** — JDs, career pages, recruiter posts  
+2. **Technology** — GitHub, papers, Kaggle  
 3. **Practitioner** — Reddit, X, LinkedIn  
-4. **Hype** — influencers and viral news (never averaged with demand)
+4. **Hype** — viral news (never averaged with demand)
+
+V1 ingestion is **manual** (JD paste, evidence entry, optional URL). Schema is ready for later sources. No scraping.
+
+## Next action
+
+Today is the home screen. Every recommended action has why, target, evidence gap, effort, and expected outcome.
+
+Action value is computed, not an LLM opinion:
+
+`Demand × Job relevance × Evidence gap × Jobs affected ÷ Effort`
 
 ## Run it
 
@@ -28,14 +61,4 @@ npm install
 npm run dev
 ```
 
-Then open the app. Demo data is seeded for a London AI Engineer / AI Product search. **Reset demo** in the sidebar restores it.
-
-Paste a JD via **Add job**. Local extraction always runs; **Analyse with AI** uses xAI when `XAI_API_KEY` is available.
-
-## Stack
-
-React 19, TanStack Start, Tailwind v4, Zustand (local persistence). No accounts. Your evidence stays in the browser.
-
-## Product loop
-
-Add Job → Analyse gap → Select evidence → Build CV → Create project → Apply → Record outcome
+Demo data is seeded for a London AI Engineer / AI Product search. **Reset demo** restores it.

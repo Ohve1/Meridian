@@ -16,7 +16,9 @@ import type {
   OSState,
   Project,
   ProjectStatus,
+  SourceType,
 } from "./types";
+import { SOURCE_TYPE_TIER } from "./types";
 
 
 interface Actions {
@@ -41,6 +43,13 @@ interface Actions {
   buildCV: (jobId: string) => CVVersion | null;
   applyToJob: (jobId: string, cvId: string) => Application | null;
   setApplicationStage: (id: string, stage: AppStage, rejectStage?: string) => void;
+  addSignal: (input: {
+    source: string;
+    sourceType: SourceType;
+    url?: string;
+    rawContent: string;
+    extractedTopics?: string[];
+  }) => MarketSignal;
 }
 
 export type Store = OSState & Actions;
@@ -215,7 +224,30 @@ export const useOS = create<Store>()(
             a.id === id ? { ...a, stage, rejectStage } : a,
           ),
         }),
+
+      addSignal: (input) => {
+        const signal: MarketSignal = {
+          id: uid("sig"),
+          source: input.source.trim(),
+          sourceType: input.sourceType,
+          tier: SOURCE_TYPE_TIER[input.sourceType],
+          url: input.url?.trim() || undefined,
+          timestamp: new Date().toISOString().slice(0, 10),
+          rawContent: input.rawContent.trim(),
+          credibility:
+            SOURCE_TYPE_TIER[input.sourceType] === 1
+              ? 0.9
+              : SOURCE_TYPE_TIER[input.sourceType] === 2
+                ? 0.75
+                : SOURCE_TYPE_TIER[input.sourceType] === 3
+                  ? 0.55
+                  : 0.3,
+          extractedTopics: input.extractedTopics ?? [],
+        };
+        set({ signals: [signal, ...get().signals] });
+        return signal;
+      },
     }),
-    { name: "meridian-os-v1", skipHydration: true },
+    { name: "meridian-os-v2", skipHydration: true },
   ),
 );
